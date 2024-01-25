@@ -1,8 +1,10 @@
-import 'dart:async';
-
 import 'package:bluetooth_thermal_printer/bluetooth_thermal_printer.dart';
-import 'package:esc_pos_utils_plus/esc_pos_utils.dart';
+import 'package:bluetooth_thermal_printer_example/screenshot_history.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart';
+
 import 'package:flutter/material.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:image/image.dart' as im;
 
 void main() {
   runApp(MyApp());
@@ -21,6 +23,17 @@ class _MyAppState extends State<MyApp> {
 
   bool connected = false;
   List availableBluetoothDevices = [];
+  ScreenshotController screenshotController = ScreenshotController();
+
+  List<CardHistory> history = [
+    CardHistory(
+      amount: 10,
+      date: DateTime.now(),
+      kiosk: "Second Kiosk",
+      paymentType: 1,
+      transactionId: "trsh2_1_638410042484031148",
+    )
+  ];
 
   Future<void> getBluetooth() async {
     final List? bluetooths = await BluetoothThermalPrinter.getBluetooths;
@@ -31,19 +44,32 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> setConnect(String mac) async {
-    final String? result = await BluetoothThermalPrinter.connect(mac);
-    print("state conneected $result");
-    if (result == "true") {
-      setState(() {
-        connected = true;
-      });
+    try {
+      debugPrint("Connecting to printer - $mac");
+      final String? result = await BluetoothThermalPrinter.connect(mac);
+      print("state conneected $result");
+      if (result == "true") {
+        setState(() {
+          connected = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-');
+      debugPrint("Error while connecting to printer");
+      debugPrint(e.toString());
+      debugPrint('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-');
     }
   }
 
   Future<void> printTicket() async {
     String? isConnected = await BluetoothThermalPrinter.connectionStatus;
     if (isConnected == "true") {
-      List<int> bytes = await getTicket();
+      // List<int> bytes = await getTicket();
+      // List<int> bytes = await printADIBFReciept();
+      List<int>? bytes = await getScreenshot();
+      if (bytes == null) {
+        return;
+      }
       final result = await BluetoothThermalPrinter.writeBytes(bytes);
       print("Print $result");
     } else {
@@ -234,8 +260,206 @@ class _MyAppState extends State<MyApp> {
     return bytes;
   }
 
+  Future<List<int>> printADIBFReciept() async {
+    List<int> bytes = [];
+    CapabilityProfile profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+
+    bytes += generator.text(
+      "ADIBF 2022",
+      styles: PosStyles(
+        fontType: PosFontType.fontA,
+        align: PosAlign.center,
+        height: PosTextSize.size1,
+        width: PosTextSize.size1,
+      ),
+      linesAfter: 1,
+    );
+
+    bytes += generator.hr();
+
+    bytes += generator.row([
+      PosColumn(
+        text: 'KIOSK',
+        width: 6,
+        styles: PosStyles(
+          align: PosAlign.left,
+        ),
+      ),
+      PosColumn(
+        text: 'Second Kiosk',
+        width: 6,
+        styles: PosStyles(
+          align: PosAlign.right,
+        ),
+      ),
+    ]);
+
+    bytes += generator.hr();
+
+    bytes += generator.text(
+      "History",
+      styles: PosStyles(
+        align: PosAlign.center,
+        height: PosTextSize.size1,
+        width: PosTextSize.size1,
+      ),
+      linesAfter: 1,
+    );
+    // const utf8Encoder = Utf8Encoder();
+    // final encodedStr = utf8Encoder.convert('عملية');
+
+    bytes += generator.row([
+      PosColumn(
+        text: "Transaction",
+        width: 3,
+        styles: PosStyles(
+          align: PosAlign.left,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      ),
+      PosColumn(
+        text: "Type",
+        width: 2,
+        styles: PosStyles(
+          align: PosAlign.center,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      ),
+      PosColumn(
+        text: "Amount",
+        width: 2,
+        styles: PosStyles(
+          align: PosAlign.center,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      ),
+      PosColumn(
+        text: "Method",
+        width: 2,
+        styles: PosStyles(
+          align: PosAlign.center,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      ),
+      PosColumn(
+        text: "Action Date",
+        width: 3,
+        styles: PosStyles(
+          align: PosAlign.center,
+          height: PosTextSize.size1,
+          width: PosTextSize.size1,
+        ),
+      ),
+    ]);
+
+    history.forEach((item) {
+      bytes += generator.row([
+        PosColumn(
+          text: item.transactionId ?? "-",
+          width: 12,
+          styles: PosStyles(
+            align: PosAlign.left,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+      ]);
+      bytes += generator.row([
+        PosColumn(
+          text: "",
+          width: 3,
+          styles: PosStyles(
+            align: PosAlign.left,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+        PosColumn(
+          text: item.transactionType.toString(),
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+        PosColumn(
+          text: item.amount.toString(),
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+        PosColumn(
+          text: item.paymentType.toString(),
+          width: 2,
+          styles: PosStyles(
+            align: PosAlign.center,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+        PosColumn(
+          text: "25-1-2024 11:30",
+          width: 3,
+          styles: PosStyles(
+            align: PosAlign.left,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+      ]);
+    });
+
+    bytes += generator.cut();
+    return bytes;
+  }
+
+  Future<List<int>?> getScreenshot() async {
+    List<int> bytes = [];
+    CapabilityProfile profile = await CapabilityProfile.load();
+    final generator = Generator(PaperSize.mm80, profile);
+
+    double pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+    var screenshotImageBytes = await screenshotController.captureFromLongWidget(
+      ScreenshotHistory(
+        history: history,
+        dpr: pixelRatio,
+      ),
+    );
+    if (screenshotImageBytes != null) {
+      final im.Image? screenshotImage = im.decodeImage(screenshotImageBytes);
+      if (screenshotImage == null) return null;
+      bytes += generator.image(screenshotImage);
+    }
+
+    bytes += generator.cut();
+    return bytes;
+  }
+
   @override
   Widget build(BuildContext context) {
+    history.clear();
+    for (var i = 0; i < 10; i++) {
+      history.add(
+        CardHistory(
+          amount: 10,
+          date: DateTime.now(),
+          kiosk: "Second Kiosk - $i",
+          paymentType: 1,
+          transactionType: 2,
+          transactionId: "trsh2_1_638410042484031148",
+        ),
+      );
+    }
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
@@ -243,47 +467,79 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Container(
           padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Text("Search Paired Bluetooth"),
-              TextButton(
-                onPressed: () {
-                  this.getBluetooth();
-                },
-                child: Text("Search"),
-              ),
-              Container(
-                height: 200,
-                child: ListView.builder(
-                  itemCount: availableBluetoothDevices.length > 0
-                      ? availableBluetoothDevices.length
-                      : 0,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      onTap: () {
-                        String select = availableBluetoothDevices[index];
-                        List list = select.split("#");
-                        // String name = list[0];
-                        String mac = list[1];
-                        this.setConnect(mac);
+              // Positioned(
+              //   child: ScreenshotHistory(
+              //     history: history,
+              //   ),
+              // ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image.asset("assets/alc-logo.png"),
+                  Text("Search Paired Bluetooth"),
+                  TextButton(
+                    onPressed: () {
+                      this.getBluetooth();
+                    },
+                    child: Text("Search"),
+                  ),
+                  Container(
+                    height: 200,
+                    child: ListView.builder(
+                      itemCount: availableBluetoothDevices.length > 0
+                          ? availableBluetoothDevices.length
+                          : 0,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          onTap: () {
+                            String select = availableBluetoothDevices[index];
+                            List list = select.split("#");
+                            // String name = list[0];
+                            String mac = list[1];
+                            debugPrint('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-');
+                            debugPrint(mac.toString());
+                            debugPrint('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-');
+                            this.setConnect(mac);
+                          },
+                          title: Text('${availableBluetoothDevices[index]}'),
+                          subtitle: Text("Click to connect"),
+                        );
                       },
-                      title: Text('${availableBluetoothDevices[index]}'),
-                      subtitle: Text("Click to connect"),
-                    );
-                  },
-                ),
-              ),
-              SizedBox(
-                height: 30,
-              ),
-              TextButton(
-                onPressed: connected ? this.printGraphics : null,
-                child: Text("Print"),
-              ),
-              TextButton(
-                onPressed: connected ? this.printTicket : null,
-                child: Text("Print Ticket"),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 30,
+                  ),
+                  Text(
+                    connected.toString(),
+                  ),
+                  TextButton(
+                    onPressed: connected ? this.printGraphics : null,
+                    child: Text("Print"),
+                  ),
+                  TextButton(
+                    onPressed: connected
+                        ? () async {
+                            this.printTicket();
+                          }
+                        : null,
+                    child: Text("Print Ticket"),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      String? res = await BluetoothThermalPrinter.disconnect();
+                      if (res == "true") {
+                        connected = false;
+                        if (mounted) {
+                          setState(() {});
+                        }
+                      }
+                    },
+                    child: Text("Disconnect"),
+                  ),
+                ],
               ),
             ],
           ),

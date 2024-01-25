@@ -3,7 +3,7 @@ description: Demonstrates how to use the bluetooth_thermal_printer plugin.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
@@ -12,7 +12,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  esc_pos_utils_plus: ^2.0.2
+  # esc_pos_utils_plus: 2.0.1+6
+  # flutter_esc_pos_utils_v2: ^0.0.2
+  esc_pos_utils: ^1.1.0
+  image: ^3.3.0
+  screenshot: ^2.1.0
 
   bluetooth_thermal_printer:
     # When depending on this package from a real application you should use:
@@ -35,15 +39,15 @@ dev_dependencies:
 
 # The following section is specific to Flutter.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-    # - asset/demo.png
+  assets:
+    - assets/
+      # - asset/demo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
