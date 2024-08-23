@@ -6,7 +6,7 @@ description: Demonstrates how to use the bluetooth_thermal_printer plugin.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 environment:
-  sdk: ">=2.12.0 <3.0.0"
+  sdk: ^3.5.0
 
 dependencies:
   flutter:
@@ -14,9 +14,10 @@ dependencies:
 
   # esc_pos_utils_plus: 2.0.1+6
   # flutter_esc_pos_utils_v2: ^0.0.2
-  esc_pos_utils: ^1.1.0
-  image: ^3.3.0
-  screenshot: ^2.1.0
+  flutter_esc_pos_utils: ^1.0.1
+  # esc_pos_utils: ^1.1.0
+  image: ^4.2.0
+  screenshot: ^3.0.0
 
   bluetooth_thermal_printer:
     # When depending on this package from a real application you should use:

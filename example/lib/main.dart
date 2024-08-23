@@ -1,6 +1,7 @@
 import 'package:bluetooth_thermal_printer/bluetooth_thermal_printer.dart';
 import 'package:bluetooth_thermal_printer_example/screenshot_history.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+// import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:flutter_esc_pos_utils/flutter_esc_pos_utils.dart';
 
 import 'package:flutter/material.dart';
 import 'package:screenshot/screenshot.dart';
